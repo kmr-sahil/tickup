@@ -2,13 +2,24 @@
   "manifest_version": 3,
   "name": "Tickup",
   "version": "1.0.0",
+  "description": "A productivity tracker app",
   "action": {
     "default_popup": "popup.html"
   },
-  "permissions": ["storage"],
-  "host_permissions": [],
-  "options_page": "options.html",
-  "description": "A productivity tracker app",
+  "permissions": [
+  "storage",
+  "scripting"
+],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
   "icons": {
     "16": "public/icon.png",
     "32": "public/icon.png",
