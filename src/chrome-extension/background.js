@@ -1,49 +1,57 @@
-// src/background.ts
-let timer = 0;
-let isRunning = false;
-let interval = null;
+// ===== background.js =====
 
-chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
-  if (msg.type === "GET_TIMER_STATE") {
-    sendResponse({ timer, isRunning });
+let timerInterval = null;
+let activeTodoId = null;
+let startTimestamp = null;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'START_TODO') {
+    activeTodoId = message.todoId;
+    startTimestamp = Date.now();
+
+    chrome.storage.local.set({ activeTodoId, startTimestamp });
+
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
   }
 
-  if (msg.type === "START_TIMER") {
-    if (!isRunning) {
-      isRunning = true;
-      interval = setInterval(() => {
-        timer++;
-        chrome.runtime.sendMessage({ type: "TIMER_TICK", timer });
-      }, 1000);
-    }
+  if (message.type === 'END_TODO') {
+    endActiveTodo();
   }
 
-  if (msg.type === "STOP_TIMER") {
-    if (isRunning) {
-      isRunning = false;
-      clearInterval(interval);
-      interval = null;
-
-      const key = `tickup_daily_${new Date().toISOString().split("T")[0]}`;
-      chrome.storage.local.get([key], (res) => {
-        const total = res[key] || 0;
-        chrome.storage.local.set({ [key]: total + timer });
-      });
-    }
-  }
-
-  if (msg.type === "RESET_TIMER") {
-    if (isRunning) clearInterval(interval);
-    isRunning = false;
-    interval = null;
-
-    const key = `tickup_daily_${new Date().toISOString().split("T")[0]}`;
-    chrome.storage.local.get([key], (res) => {
-      const total = res[key] || 0;
-      chrome.storage.local.set({ [key]: total + timer });
-    });
-
-    timer = 0;
-    chrome.runtime.sendMessage({ type: "TIMER_TICK", timer });
+  if (message.type === 'GET_ACTIVE_TODO') {
+    sendResponse({ activeTodoId, startTimestamp });
   }
 });
+
+function updateTimer() {
+  // Nothing to do here except keeping the interval alive
+  // Real calculation done on END_TODO
+}
+
+async function endActiveTodo() {
+  if (!activeTodoId || !startTimestamp) return;
+
+  const elapsedSeconds = Math.floor((Date.now() - startTimestamp) / 1000);
+  const { todos = [] } = await chrome.storage.local.get(['todos']);
+
+  const updatedTodos = todos.map(todo => {
+    if (todo.id === activeTodoId) {
+      return {
+        ...todo,
+        timeTaken: (todo.timeTaken || 0) + elapsedSeconds,
+        isDone: true // Auto-mark as done
+      };
+    }
+    return todo;
+  });
+
+  chrome.storage.local.set({ todos: updatedTodos });
+
+  activeTodoId = null;
+  startTimestamp = null;
+  chrome.storage.local.remove(['activeTodoId', 'startTimestamp']);
+
+  if (timerInterval) clearInterval(timerInterval);
+}
+

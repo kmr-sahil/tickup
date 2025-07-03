@@ -3,8 +3,11 @@ export interface TodoItem {
   id: number;
   title: string;
   date: string;
-  isDone: boolean;
+  timeTaken: number;
+  isDone?: boolean; // New: for checkbox
 }
+
+
 
 export interface StorageData {
   todos?: TodoItem[];

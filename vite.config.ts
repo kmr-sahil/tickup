@@ -10,7 +10,7 @@ export default defineConfig({
       targets: [
         { src: "src/chrome-extension/manifest.json", dest: "." },
         { src: "src/chrome-extension/background.js", dest: "." },
-        { src: "src/chrome-extension/content.js", dest: "." },
+        //{ src: "src/chrome-extension/content.js", dest: "." },
         { src: "src/chrome-extension/public/icon.png", dest: "./public" }
       ]
     })
